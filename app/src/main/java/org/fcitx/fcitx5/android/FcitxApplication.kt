@@ -15,21 +15,33 @@ import android.os.Build
 import android.os.Process
 import android.util.Log
 import androidx.preference.PreferenceManager
+import com.blankj.utilcode.util.GsonUtils
+import com.blankj.utilcode.util.SPUtils
+import com.blankj.utilcode.util.Utils
+import com.hjq.toast.Toaster
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.plus
 import org.fcitx.fcitx5.android.daemon.FcitxDaemon
 import org.fcitx.fcitx5.android.data.clipboard.ClipboardManager
+import org.fcitx.fcitx5.android.data.clipboard.db.AccountCard
+import org.fcitx.fcitx5.android.data.clipboard.db.Accounts
 import org.fcitx.fcitx5.android.data.prefs.AppPrefs
 import org.fcitx.fcitx5.android.data.theme.ThemeManager
 import org.fcitx.fcitx5.android.ui.main.LogActivity
 import org.fcitx.fcitx5.android.utils.AppUtil
 import org.fcitx.fcitx5.android.utils.Locales
+import org.fcitx.fcitx5.android.utils.RSAUtil
+import org.fcitx.fcitx5.android.utils.RSAUtil.PUBLIC_KEY
 import org.fcitx.fcitx5.android.utils.isDarkMode
 import org.fcitx.fcitx5.android.utils.startActivity
 import org.fcitx.fcitx5.android.utils.userManager
 import timber.log.Timber
+import java.security.KeyPair
+import java.security.PrivateKey
+import java.security.PublicKey
 import kotlin.system.exitProcess
+
 
 class FcitxApplication : Application() {
 
@@ -127,6 +139,9 @@ class FcitxApplication : Application() {
             AppPrefs.getInstance().syncToDeviceEncryptedStorage()
             ThemeManager.syncToDeviceEncryptedStorage()
         }
+        Utils.init(this)
+        Toaster.init(this)
+        generateRsaKeyPair()
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
@@ -144,4 +159,45 @@ class FcitxApplication : Application() {
         fun getLastPid() = lastPid
         private const val MAX_STACKTRACE_SIZE = 128000
     }
+
+    fun generateRsaKeyPair(): KeyPair {
+        if (SPUtils.getInstance().contains("privateKey") && SPUtils.getInstance().contains("publicKey")){
+            val privateKey = SPUtils.getInstance().getString("privateKey","")
+            val publicKey = SPUtils.getInstance().getString("publicKey","")
+            return KeyPair(RSAUtil.getPublicKey(publicKey),RSAUtil.getPrivateKey(privateKey))
+        }else {
+
+            val keyPair = RSAUtil.initKey(2048)
+            SPUtils.getInstance().put("privateKey",RSAUtil.getPrivateKeyStr(keyPair))
+            SPUtils.getInstance().put("publicKey",RSAUtil.getPublicKeyStr(keyPair))
+            return KeyPair(keyPair.get(PUBLIC_KEY) as PublicKey,keyPair.get(RSAUtil.PRIVATE_KEY) as PrivateKey)
+        }
+    }
+
+    fun setAccount(accountMessageEntry: AccountCard){
+        SPUtils.getInstance().put("localAccount",GsonUtils.toJson(accountMessageEntry))
+    }
+
+    fun getAccount():AccountCard {
+        val text = SPUtils.getInstance().getString("localAccount")
+        return GsonUtils.fromJson(text,AccountCard::class.java)
+    }
+
+    fun getAccountList(): Accounts {
+        val text = SPUtils.getInstance().getString(
+            "accountList", GsonUtils.toJson(
+                Accounts(
+                    arrayListOf()
+                )
+            )
+        )
+        return GsonUtils.fromJson(text, Accounts::class.java)
+    }
+
+    fun addAccount(accountCard: AccountCard) {
+        val accounts = getAccountList().userList
+        accounts.add(accountCard)
+        SPUtils.getInstance().put("accountList",GsonUtils.toJson(Accounts(accounts)))
+    }
+
 }

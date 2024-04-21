@@ -26,7 +26,7 @@ import org.fcitx.fcitx5.android.utils.clipboardManager
 
 object ClipboardManager : ClipboardManager.OnPrimaryClipChangedListener,
     CoroutineScope by CoroutineScope(SupervisorJob() + Dispatchers.Default) {
-    private lateinit var clbDb: ClipboardDatabase
+     lateinit var clbDb: ClipboardDatabase
     private lateinit var clbDao: ClipboardDao
 
     fun interface OnClipboardUpdateListener {

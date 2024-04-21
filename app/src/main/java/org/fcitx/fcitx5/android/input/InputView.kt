@@ -9,6 +9,7 @@ import android.app.Dialog
 import android.content.res.Configuration
 import android.graphics.Color
 import android.os.Build
+import android.view.LayoutInflater
 import android.view.View
 import android.view.View.OnClickListener
 import android.view.WindowManager
@@ -36,6 +37,7 @@ import org.fcitx.fcitx5.android.data.theme.Theme
 import org.fcitx.fcitx5.android.data.theme.ThemeManager
 import org.fcitx.fcitx5.android.data.theme.ThemePrefs.NavbarBackground
 import org.fcitx.fcitx5.android.input.bar.KawaiiBarComponent
+import org.fcitx.fcitx5.android.input.bar.ui.temp.TopLayout
 import org.fcitx.fcitx5.android.input.broadcast.InputBroadcaster
 import org.fcitx.fcitx5.android.input.broadcast.PreeditEmptyStateComponent
 import org.fcitx.fcitx5.android.input.broadcast.PunctuationComponent
@@ -198,7 +200,7 @@ class InputView(
     }
 
     val keyboardView: View
-
+    val topLayout:TopLayout
     init {
         // MUST call before any operation
         setupScope()
@@ -275,8 +277,12 @@ class InputView(
                 centerVertically()
                 centerHorizontally()
             })
-            add(kawaiiBar.view, lParams(matchParent, dp(KawaiiBarComponent.HEIGHT)) {
+            topLayout = TopLayout(context)
+            addView(topLayout,lParams(matchParent,wrapContent) {
                 topOfParent()
+            })
+            add(kawaiiBar.view, lParams(matchParent, dp(KawaiiBarComponent.HEIGHT)) {
+                below(topLayout)
                 centerHorizontally()
             })
             add(leftPaddingSpace, lParams {

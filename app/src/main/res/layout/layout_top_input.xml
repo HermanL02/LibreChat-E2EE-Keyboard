@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ SPDX-License-Identifier: LGPL-2.1-or-later
+  ~ SPDX-FileCopyrightText: Copyright 2024 Fcitx5 for Android Contributors
+  -->
+
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:gravity="center_vertical"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:padding="10dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <TextView
+            android:text="选择对话人:"
+            android:textColor="#ffffff"
+            android:layout_marginStart="10dp"
+            android:layout_marginEnd="10dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+
+        <Spinner
+            android:id="@+id/sp_account"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/ll_content"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="10dp"
+        android:visibility="gone"
+        android:layout_marginBottom="10dp"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/tv_decrypt_content"
+            android:textColor="#ffffff"
+            android:gravity="center"
+            android:layout_gravity="center_vertical"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"/>
+
+        <ImageView
+            android:id="@+id/iv_del"
+            android:src="@drawable/ic_baseline_backspace_24"
+            android:padding="10dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+        <Space
+            android:layout_width="wrap_content"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"/>
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_card"
+            android:text="身份"
+            android:theme="@style/Theme.MaterialComponents"
+            style="@style/Theme.MaterialComponents"
+            app:cornerRadius="30dp"
+            android:layout_marginStart="20dp"
+            app:icon="@drawable/baseline_add_card_24"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+
+        <Space
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:visibility="gone"
+            android:layout_height="wrap_content"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_account"
+            android:text="通讯录"
+            android:theme="@style/Theme.MaterialComponents"
+            style="@style/Theme.MaterialComponents"
+            app:cornerRadius="30dp"
+            android:visibility="gone"
+            app:icon="@drawable/baseline_account_circle_24"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+
+        <Space
+            android:layout_width="wrap_content"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_confirm"
+            android:text="加密"
+            android:theme="@style/Theme.MaterialComponents"
+            style="@style/Theme.MaterialComponents"
+            app:cornerRadius="30dp"
+            app:icon="@drawable/baseline_add_moderator_24"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+        <Space
+            android:layout_width="wrap_content"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"/>
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_key"
+            android:text="秘钥"
+            android:theme="@style/Theme.MaterialComponents"
+            style="@style/Theme.MaterialComponents"
+            app:cornerRadius="30dp"
+            android:layout_marginEnd="20dp"
+            app:icon="@drawable/baseline_admin_panel_settings_24"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+        <Space
+            android:layout_width="wrap_content"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"/>
+    </LinearLayout>
+
+</LinearLayout>

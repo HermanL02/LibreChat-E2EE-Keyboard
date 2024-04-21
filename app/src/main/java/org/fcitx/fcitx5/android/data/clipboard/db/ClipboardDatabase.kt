@@ -9,7 +9,7 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [ClipboardEntry::class],
+    entities = [ClipboardEntry::class,AccountMessageEntry::class],
     version = 3,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
@@ -18,4 +18,6 @@ import androidx.room.RoomDatabase
 )
 abstract class ClipboardDatabase : RoomDatabase() {
     abstract fun clipboardDao(): ClipboardDao
+
+    abstract fun accountMessageDao(): AccountDao
 }

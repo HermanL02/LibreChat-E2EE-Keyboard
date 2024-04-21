@@ -137,6 +137,10 @@ dependencies {
     androidTestImplementation(libs.androidx.test.rules)
     androidTestImplementation(libs.androidx.lifecycle.testing)
     androidTestImplementation(libs.junit)
+
+    implementation("com.blankj:utilcodex:1.31.1")
+    implementation("org.apache.commons:commons-lang3:3.12.0")
+    implementation("com.github.getActivity:Toaster:12.6")
 }
 
 configurations {

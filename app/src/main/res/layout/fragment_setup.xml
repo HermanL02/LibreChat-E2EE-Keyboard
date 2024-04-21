@@ -27,6 +27,16 @@
         app:layout_constraintTop_toTopOf="parent"
         tools:text="Hint text here ..." />
 
+    <EditText
+        android:id="@+id/et_user_name"
+        app:layout_constraintTop_toBottomOf="@id/hint_text"
+        android:hint="输入昵称"
+        android:layout_width="300dp"
+        android:layout_marginTop="10dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_height="wrap_content"/>
+
     <Button
         android:id="@+id/action_button"
         android:layout_width="wrap_content"
@@ -34,7 +44,7 @@
         android:layout_marginTop="24dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/hint_text"
+        app:layout_constraintTop_toBottomOf="@+id/et_user_name"
         tools:text="Action" />
 
     <ImageView
@@ -48,7 +58,7 @@
         app:layout_constraintEnd_toStartOf="@id/done_text"
         app:layout_constraintHorizontal_chainStyle="packed"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/hint_text" />
+        app:layout_constraintTop_toBottomOf="@id/et_user_name" />
 
     <TextView
         android:id="@+id/done_text"

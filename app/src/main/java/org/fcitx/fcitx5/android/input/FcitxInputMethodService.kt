@@ -13,19 +13,24 @@ import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
 import android.text.InputType
+import android.util.Log
 import android.util.LruCache
 import android.util.Size
 import android.view.KeyCharacterMap
 import android.view.KeyEvent
+import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.Window
 import android.view.inputmethod.CursorAnchorInfo
 import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.ExtractedTextRequest
 import android.view.inputmethod.InlineSuggestionsRequest
 import android.view.inputmethod.InlineSuggestionsResponse
 import android.view.inputmethod.InputMethodSubtype
+import android.widget.ArrayAdapter
 import android.widget.FrameLayout
+import android.widget.TextView
 import android.widget.inline.InlinePresentationSpec
 import androidx.annotation.Keep
 import androidx.annotation.RequiresApi
@@ -36,12 +41,18 @@ import androidx.autofill.inline.common.ViewStyle
 import androidx.autofill.inline.v1.InlineSuggestionUi
 import androidx.core.view.updateLayoutParams
 import androidx.lifecycle.lifecycleScope
+import com.blankj.utilcode.util.ClipboardUtils
+import com.blankj.utilcode.util.GsonUtils
+import com.blankj.utilcode.util.SPUtils
+import com.blankj.utilcode.util.ThreadUtils
+import com.hjq.toast.Toaster
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.launch
+import org.fcitx.fcitx5.android.FcitxApplication
 import org.fcitx.fcitx5.android.R
 import org.fcitx.fcitx5.android.core.CapabilityFlags
 import org.fcitx.fcitx5.android.core.FcitxAPI
@@ -53,6 +64,9 @@ import org.fcitx.fcitx5.android.core.SubtypeManager
 import org.fcitx.fcitx5.android.daemon.FcitxConnection
 import org.fcitx.fcitx5.android.daemon.FcitxDaemon
 import org.fcitx.fcitx5.android.data.InputFeedbacks
+import org.fcitx.fcitx5.android.data.clipboard.ClipboardManager
+import org.fcitx.fcitx5.android.data.clipboard.db.AccountCard
+import org.fcitx.fcitx5.android.data.clipboard.db.AccountMessageEntry
 import org.fcitx.fcitx5.android.data.prefs.AppPrefs
 import org.fcitx.fcitx5.android.data.prefs.ManagedPreference
 import org.fcitx.fcitx5.android.data.theme.Theme
@@ -60,13 +74,16 @@ import org.fcitx.fcitx5.android.data.theme.ThemeManager
 import org.fcitx.fcitx5.android.input.cursor.CursorRange
 import org.fcitx.fcitx5.android.input.cursor.CursorTracker
 import org.fcitx.fcitx5.android.utils.InputMethodUtil
+import org.fcitx.fcitx5.android.utils.RSAUtil
 import org.fcitx.fcitx5.android.utils.alpha
 import org.fcitx.fcitx5.android.utils.inputMethodManager
 import org.fcitx.fcitx5.android.utils.withBatchEdit
+import org.json.JSONObject
 import splitties.bitflags.hasFlag
 import splitties.dimensions.dp
 import splitties.resources.styledColor
 import timber.log.Timber
+import java.security.AccessController
 import kotlin.math.max
 
 
@@ -251,11 +268,25 @@ class FcitxInputMethodService : LifecycleInputMethodService() {
             currentInputEditorInfo.inputType and InputType.TYPE_MASK_CLASS == InputType.TYPE_NULL
         ) {
             sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL)
+            inputText = currentInputConnection?.getExtractedText(ExtractedTextRequest().apply {
+                token = 0
+                flags = 0
+                hintMaxLines = 10
+                hintMaxChars = 10000
+            },0)?.text.toString()
+            Log.d("键盘","删除:"+inputText)
             return
         }
         if (lastSelection.isEmpty()) {
             if (lastSelection.start <= 0) {
                 sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL)
+                inputText = currentInputConnection?.getExtractedText(ExtractedTextRequest().apply {
+                    token = 0
+                    flags = 0
+                    hintMaxLines = 10
+                    hintMaxChars = 10000
+                },0)?.text.toString()
+                Log.d("键盘","删除:"+inputText)
                 return
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -290,9 +321,12 @@ class FcitxInputMethodService : LifecycleInputMethodService() {
         }
     }
 
+    var inputText = ""
     fun commitText(text: String, cursor: Int = -1) {
         val ic = currentInputConnection ?: return
         // when composing text equals commit content, finish composing text as-is
+        inputText = inputText+text
+        Log.d("键盘","输入："+inputText)
         if (composing.isNotEmpty() && composingText.toString() == text) {
             val c = if (cursor == -1) text.length else cursor
             val target = composing.start + c
@@ -412,13 +446,156 @@ class FcitxInputMethodService : LifecycleInputMethodService() {
         InputFeedbacks.syncSystemPrefs()
     }
 
+    private fun showClipDialog(){
+
+    }
+
+    private fun setAccountSpinner() {
+        if (inputView == null)return
+        inputView?.topLayout?.spAccount?.adapter = object : ArrayAdapter<AccountCard>(inputView!!.context,android.R.layout.simple_spinner_item,FcitxApplication.getInstance().getAccountList().userList) {
+            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                var rootView = LayoutInflater.from(inputView!!.context).inflate(android.R.layout.simple_spinner_item, parent, false)
+
+                val textView = rootView as TextView
+                textView.setTextColor(Color.parseColor("#ffffff"))
+                val item: AccountCard? = getItem(position)
+                if (item != null) {
+                    textView.setText(item.userName)
+                }
+                return rootView
+            }
+
+            override fun getDropDownView(
+                position: Int,
+                convertView: View?,
+                parent: ViewGroup
+            ): View {
+                val rootView = LayoutInflater.from(inputView!!.context).inflate(android.R.layout.simple_spinner_dropdown_item, parent, false)
+                val textView = rootView as TextView
+                val item: AccountCard? = getItem(position)
+                if (item != null) {
+                    textView.setText(item.userName)
+                }
+                return rootView            }
+        }
+    }
+
     override fun onCreateInputView(): View {
         // onCreateInputView will be called once, when the input area is first displayed,
         // during each onConfigurationChanged period.
         // That is, onCreateInputView would be called again, after system dark mode changes,
         // or screen orientation changes.
+
         return InputView(this, fcitx, ThemeManager.activeTheme).also {
             inputView = it
+            setAccountSpinner()
+            ClipboardUtils.addChangedListener {
+                val text = ClipboardUtils.getText().toString()
+                Log.d("用户","解码:"+text)
+                try {
+                    val json = JSONObject(text)
+                    if (json.has("publicKey")) {
+                        val card = GsonUtils.fromJson<AccountCard>(text,AccountCard::class.java)
+
+                        var hasAccount = false
+                        for (account in FcitxApplication.getInstance().getAccountList().userList) {
+                            if (card.userId == account.userId){
+                                hasAccount = true
+                            }
+                        }
+                        if (hasAccount){
+                            Toaster.show("已添加 ${card.userName}")
+                            return@addChangedListener
+                        }else {
+                            FcitxApplication.getInstance().addAccount(card)
+                            setAccountSpinner()
+                            Toaster.show("${card.userName}已经保存至通讯录")
+                        }
+                        return@addChangedListener
+                    }
+
+                    if (json.has("message") && json.has("userId")) {
+                        val accountMessageEntry = GsonUtils.fromJson<AccountMessageEntry>(text,AccountMessageEntry::class.java)
+
+                        lifecycleScope.launch {
+                            ClipboardManager.clbDb.accountMessageDao().insert(accountMessageEntry)
+
+                            var card:AccountCard? = null
+                            for (account in FcitxApplication.getInstance().getAccountList().userList) {
+                                if (account.userId == accountMessageEntry.userId){
+                                    card = account
+                                }
+                            }
+                            if (card == null){
+                                ThreadUtils.runOnUiThread {
+                                    Toaster.show("还未添加用户")
+                                }
+                                return@launch
+                            }
+
+                            ThreadUtils.runOnUiThread {
+                                val privateKey = SPUtils.getInstance().getString("privateKey","")
+                                val content = RSAUtil.decrypt(accountMessageEntry.message,privateKey)
+                                Log.d("用户","解码1:"+content)
+                                inputView?.topLayout?.llContent?.visibility = View.VISIBLE
+                                inputView?.topLayout?.tvDecryptContent?.setText("解密:"+content)
+                            }
+                        }
+                    }
+                }catch (e: Throwable){
+                    e.printStackTrace()
+                }
+            }
+
+            inputView!!.topLayout.btnCard.setOnClickListener {
+                val card = FcitxApplication.getInstance().getAccount()
+                Log.d("用户",GsonUtils.toJson(card))
+                currentInputConnection.deleteSurroundingText(-inputText.length, 0)
+                currentInputConnection.deleteSurroundingText(0,inputText.length)
+
+                currentInputConnection.setComposingText(GsonUtils.toJson(card),1)
+                inputText = ""
+            }
+            inputView!!.topLayout.ivDel.setOnClickListener {
+                inputView?.topLayout?.llContent?.visibility = View.GONE
+                inputView?.topLayout?.tvDecryptContent?.setText("")
+            }
+            inputView!!.topLayout.btnConfirm.setOnClickListener {
+
+                val req = ExtractedTextRequest()
+                req.token = 0
+                req.flags = 0
+                req.hintMaxLines = 10
+                req.hintMaxChars = 10000
+                val et = currentInputConnection.getExtractedText(req, 0)
+                if (et != null) {
+                    inputText = et.text.toString()
+                }
+                Log.d("键盘","确认:"+inputText)
+                if (inputText.isNullOrBlank())return@setOnClickListener
+
+                val card = inputView?.topLayout?.spAccount?.selectedItemPosition?.let { it1 ->
+                    FcitxApplication.getInstance().getAccountList().userList.get(
+                        it1
+                    )
+                }
+                if (card == null)return@setOnClickListener
+
+                val content = RSAUtil.encrypt(inputText,card!!.publicKey)
+                Log.d("键盘","确认:"+content)
+
+                val accountMessageEntry = AccountMessageEntry(
+                    0,
+                    FcitxApplication.getInstance().getAccount().userId,
+                    FcitxApplication.getInstance().getAccount().userName,
+                    content,
+                    System.currentTimeMillis()
+                )
+                currentInputConnection.deleteSurroundingText(-inputText.length, 0)
+                currentInputConnection.deleteSurroundingText(0,inputText.length)
+                currentInputConnection.setComposingText(GsonUtils.toJson(accountMessageEntry),1)
+                inputText = ""
+            }
         }
     }
 
